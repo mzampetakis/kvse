@@ -15,7 +15,7 @@ import (
 // Holds a pointer to the list, a mutex lock and the list itself
 type DataStore struct {
 	data            map[string]mapValue
-	mx              *sync.RWMutex
+	mx              sync.RWMutex
 	deletePrecision time.Duration
 }
 
@@ -24,26 +24,26 @@ type mapValue struct {
 	value      interface{}
 }
 
-// New func creates and returns a new kvse Datastore
+// New func creates and returns a new kvse DataStore instance
 // and initiates a worker to check and delete for expired keys.
 // {precision} is the minimum precision you want to achieve for deleting expired pairs.
 // Providing the precision as 0 it will use a default one: time.second.
-func New(precision time.Duration) DataStore {
+func New(precision time.Duration) *DataStore {
 	if precision == 0 {
 		precision = time.Second
 	}
 	ds := DataStore{
 		data:            map[string]mapValue{},
-		mx:              &sync.RWMutex{},
+		mx:              sync.RWMutex{},
 		deletePrecision: precision,
 	}
 	go ds.checkAndDeleteExpiredKeys()
-	return ds
+	return &ds
 }
 
 // Has returns a boolean based on whether or not the store contains a value for
 // {key}.
-func (ds DataStore) Has(key string) bool {
+func (ds *DataStore) Has(key string) bool {
 	ds.mx.RLock()
 	defer ds.mx.RUnlock()
 	_, ok := ds.data[key]
@@ -51,7 +51,7 @@ func (ds DataStore) Has(key string) bool {
 }
 
 // Get retrieves the value associated to the {key} in the store.
-func (ds DataStore) Get(key string) (interface{}, bool) {
+func (ds *DataStore) Get(key string) (interface{}, bool) {
 	ds.mx.RLock()
 	defer ds.mx.RUnlock()
 	data, ok := ds.data[key]
@@ -60,13 +60,10 @@ func (ds DataStore) Get(key string) (interface{}, bool) {
 
 // Set adds a ne value to a specific key with a {lifespan} duration.
 // Setting the {lifespan} to 0 will not let this pair to expire.
-func (ds DataStore) Set(key string, value interface{}, lifespan int64) interface{} {
+func (ds *DataStore) Set(key string, value interface{}, lifespan int64) {
 	ds.mx.Lock()
 	defer ds.mx.Unlock()
-	_, ok := ds.data[key]
-	if ok {
-		delete(ds.data, key)
-	}
+	delete(ds.data, key)
 	if lifespan > 0 {
 		lifespan = time.Now().Unix() + lifespan
 	}
@@ -74,22 +71,17 @@ func (ds DataStore) Set(key string, value interface{}, lifespan int64) interface
 		expiration: lifespan,
 		value:      value,
 	}
-	return ds
 }
 
 // Remove removes the enrty of the provided {key} if found
-func (ds DataStore) Remove(key string) interface{} {
+func (ds *DataStore) Remove(key string) {
 	ds.mx.Lock()
 	defer ds.mx.Unlock()
-	_, ok := ds.data[key]
-	if ok {
-		delete(ds.data, key)
-	}
-	return ds
+	delete(ds.data, key)
 }
 
-func (ds DataStore) checkAndDeleteExpiredKeys() {
-	for true {
+func (ds *DataStore) checkAndDeleteExpiredKeys() {
+	for {
 		ds.mx.Lock()
 		startTime := time.Now()
 		for key, data := range ds.data {
