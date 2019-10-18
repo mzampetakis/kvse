@@ -20,14 +20,14 @@ type DataStore struct {
 }
 
 type mapValue struct {
-	expiration int64
+	expiration time.Time
 	value      interface{}
 }
 
-// New func creates and returns a new kvse DataStore instance
+// New func create`s and returns a new kvse DataStore instance
 // and initiates a worker to check and delete for expired keys.
 // {precision} is the minimum precision you want to achieve for deleting expired pairs.
-// Providing the precision as 0 it will use a default one: time.second.
+// Providing the precision as 0 will use a default one: time.second.
 func New(precision time.Duration) *DataStore {
 	if precision == 0 {
 		precision = time.Second
@@ -60,15 +60,16 @@ func (ds *DataStore) Get(key string) (interface{}, bool) {
 
 // Set adds a ne value to a specific key with a {lifespan} duration.
 // Setting the {lifespan} to 0 will not let this pair to expire.
-func (ds *DataStore) Set(key string, value interface{}, lifespan int64) {
+func (ds *DataStore) Set(key string, value interface{}, lifespan time.Duration) {
 	ds.mx.Lock()
 	defer ds.mx.Unlock()
 	delete(ds.data, key)
+	var expire time.Time
 	if lifespan > 0 {
-		lifespan = time.Now().Unix() + lifespan
+		expire = time.Now().Add(lifespan)
 	}
 	ds.data[key] = mapValue{
-		expiration: lifespan,
+		expiration: expire,
 		value:      value,
 	}
 }
@@ -85,8 +86,8 @@ func (ds *DataStore) checkAndDeleteExpiredKeys() {
 		ds.mx.Lock()
 		startTime := time.Now()
 		for key, data := range ds.data {
-			now := time.Now().Unix()
-			if data.expiration != 0 && data.expiration <= now {
+			now := time.Now()
+			if !data.expiration.IsZero() && data.expiration.Before(now) {
 				delete(ds.data, key)
 			}
 		}
