@@ -65,7 +65,7 @@ func (ds *DataStore) Set(key string, value interface{}, lifespan time.Duration) 
 	defer ds.mx.Unlock()
 	delete(ds.data, key)
 	var expire time.Time
-	if lifespan > 0 {
+	if lifespan.Nanoseconds() != 0 {
 		expire = time.Now().Add(lifespan)
 	}
 	ds.data[key] = mapValue{
