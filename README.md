@@ -12,7 +12,7 @@ $ go get -u github.com/mzampetakis/kvse
 - `New` returns a new instance of a `DataStore`.
 
 ### `kvse.Set`
-- `Set(key string, value interface, lifespan int64)`
+- `Set(key string, value interface, lifespan time.Duration)`
 - `Set` adds the `value` to the data store associated to `key` and will be deleted after `lifespan` duration.
 
 ### `kvse.Get`
