@@ -7,6 +7,7 @@
 package kvse
 
 import (
+	"fmt"
 	"sync"
 	"time"
 )
@@ -97,4 +98,12 @@ func (ds *DataStore) checkAndDeleteExpiredKeys() {
 		}
 	}
 
+}
+
+func (ds *DataStore) String() string {
+	str := "PRINTING KVSE\n"
+	for key, data := range ds.data {
+		str = str + fmt.Sprintf(" Key %s \t Val: %d \t Exp: %s \n", key, data.value, data.expiration)
+	}
+	return str
 }
