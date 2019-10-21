@@ -22,3 +22,8 @@ $ go get -u github.com/mzampetakis/kvse
 ### `kvse.Has`
 - `Has(key string) bool`
 - `Has` returns a `bool` based on whether or not `key` exists in the data store. 
+
+## Running the tests
+```
+go test
+```
