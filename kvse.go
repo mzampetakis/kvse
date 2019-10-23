@@ -38,7 +38,7 @@ func New(precision time.Duration) *DataStore {
 		mx:              sync.RWMutex{},
 		deletePrecision: precision,
 	}
-	go ds.checkAndDeleteExpiredKeys()
+	go ds.deleteExpiredKeys()
 	return &ds
 }
 
@@ -82,17 +82,10 @@ func (ds *DataStore) Remove(key string) {
 	delete(ds.data, key)
 }
 
-func (ds *DataStore) checkAndDeleteExpiredKeys() {
+func (ds *DataStore) deleteExpiredKeys() {
 	for {
-		ds.mx.Lock()
 		startTime := time.Now()
-		for key, data := range ds.data {
-			now := time.Now()
-			if !data.expiration.IsZero() && data.expiration.Before(now) {
-				delete(ds.data, key)
-			}
-		}
-		ds.mx.Unlock()
+		ds.checkAndDeleteExpiredKeys()
 		if time.Since(startTime) < ds.deletePrecision {
 			time.Sleep(ds.deletePrecision - time.Since(startTime))
 		}
@@ -100,8 +93,21 @@ func (ds *DataStore) checkAndDeleteExpiredKeys() {
 
 }
 
+func (ds *DataStore) checkAndDeleteExpiredKeys() {
+	ds.mx.Lock()
+	defer ds.mx.Unlock()
+	for key, data := range ds.data {
+		now := time.Now()
+		if !data.expiration.IsZero() && data.expiration.Before(now) {
+			delete(ds.data, key)
+		}
+	}
+}
+
 func (ds *DataStore) String() string {
 	str := "PRINTING KVSE\n"
+	ds.mx.RLock()
+	defer ds.mx.RUnlock()
 	for key, data := range ds.data {
 		str = str + fmt.Sprintf(" Key %s \t Val: %d \t Exp: %s \n", key, data.value, data.expiration)
 	}
