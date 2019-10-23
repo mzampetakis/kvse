@@ -27,3 +27,8 @@ $ go get -u github.com/mzampetakis/kvse
 ```
 go test
 ```
+
+## Running the benchmarks
+```
+go test -bench=.    
+```
