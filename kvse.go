@@ -18,6 +18,13 @@ type DataStore struct {
 	data            map[string]mapValue
 	mx              sync.RWMutex
 	deletePrecision time.Duration
+	Clock           Clock
+}
+
+// Clock is an interface that provides a single function
+// to return the current time which is used for cheching expiration.
+type Clock interface {
+	Now() time.Time
 }
 
 type mapValue struct {
@@ -37,9 +44,19 @@ func New(precision time.Duration) *DataStore {
 		data:            map[string]mapValue{},
 		mx:              sync.RWMutex{},
 		deletePrecision: precision,
+		Clock:           SystemClock,
 	}
 	go ds.deleteExpiredKeys()
 	return &ds
+}
+
+// SystemClock implements Clock interface that uses time.Now().
+var SystemClock = systemClock{}
+
+type systemClock struct{}
+
+func (t systemClock) Now() time.Time {
+	return time.Now()
 }
 
 // Has returns a boolean based on whether or not the store contains a value for
@@ -67,7 +84,7 @@ func (ds *DataStore) Set(key string, value interface{}, lifespan time.Duration) 
 	delete(ds.data, key)
 	var expire time.Time
 	if lifespan.Nanoseconds() != 0 {
-		expire = time.Now().Add(lifespan)
+		expire = ds.Clock.Now().Add(lifespan)
 	}
 	ds.data[key] = mapValue{
 		expiration: expire,
@@ -84,7 +101,7 @@ func (ds *DataStore) Remove(key string) {
 
 func (ds *DataStore) deleteExpiredKeys() {
 	for {
-		startTime := time.Now()
+		startTime := ds.Clock.Now()
 		ds.checkAndDeleteExpiredKeys()
 		if time.Since(startTime) < ds.deletePrecision {
 			time.Sleep(ds.deletePrecision - time.Since(startTime))
@@ -97,7 +114,7 @@ func (ds *DataStore) checkAndDeleteExpiredKeys() {
 	ds.mx.Lock()
 	defer ds.mx.Unlock()
 	for key, data := range ds.data {
-		now := time.Now()
+		now := ds.Clock.Now()
 		if !data.expiration.IsZero() && data.expiration.Before(now) {
 			delete(ds.data, key)
 		}
@@ -105,9 +122,11 @@ func (ds *DataStore) checkAndDeleteExpiredKeys() {
 }
 
 func (ds *DataStore) String() string {
-	str := "PRINTING KVSE\n"
 	ds.mx.RLock()
 	defer ds.mx.RUnlock()
+	str := "PRINTING KVSE STRUCTURE\n"
+	str = str + fmt.Sprintf("%v", ds)
+	str = "DUMPING KVSE DATA\n"
 	for key, data := range ds.data {
 		str = str + fmt.Sprintf(" Key %s \t Val: %d \t Exp: %s \n", key, data.value, data.expiration)
 	}

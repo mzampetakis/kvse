@@ -13,6 +13,7 @@ func TestKvseNew(t *testing.T) {
 		data:            map[string]mapValue{},
 		mx:              sync.RWMutex{},
 		deletePrecision: time.Millisecond,
+		Clock:           SystemClock,
 	}
 	got := New(time.Millisecond)
 	if !reflect.DeepEqual(got, want) {
@@ -23,6 +24,7 @@ func TestKvseNew(t *testing.T) {
 		data:            map[string]mapValue{},
 		mx:              sync.RWMutex{},
 		deletePrecision: time.Second,
+		Clock:           SystemClock,
 	}
 	got = New(0)
 	if !reflect.DeepEqual(got, want) {
