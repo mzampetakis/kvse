@@ -67,18 +67,38 @@ func TestKvseGet(t *testing.T) {
 	}
 }
 
+type pastClock struct{}
+
+var PastClock = pastClock{}
+
+func (t pastClock) Now() time.Time {
+	pt, _ := time.Parse(time.RFC3339, "2000-01-01T00:00:00+00:00")
+	return pt
+}
+
+type futureClock struct{}
+
+var FutureClock = futureClock{}
+
+func (t futureClock) Now() time.Time {
+	pt, _ := time.Parse(time.RFC3339, "9999-01-01T00:00:00+00:00")
+	return pt
+}
+
 func TestKvseSetExpiration(t *testing.T) {
-	kvses := New(time.Second)
+	kvses := New(time.Millisecond)
+	kvses.Clock = PastClock
 	for i := 1; i <= 10; i++ {
-		kvses.Set(strconv.Itoa(i), i*2, 500*time.Millisecond)
+		kvses.Set(strconv.Itoa(i), i*2, time.Millisecond)
 	}
-	time.Sleep(10 * time.Millisecond)
+	time.Sleep(2 * time.Millisecond)
 	for i := 1; i <= 10; i++ {
 		if data, ok := kvses.data[strconv.Itoa(i)]; !ok || (ok && data.value != i*2) {
 			t.Errorf("Persisted kvse failed. Added at %s: %d, and didn't got it back.", strconv.Itoa(i), 2*i)
 		}
 	}
-	time.Sleep(time.Second)
+	kvses.Clock = FutureClock
+	time.Sleep(2 * time.Millisecond)
 	for i := 1; i <= 10; i++ {
 		if _, ok := kvses.data[strconv.Itoa(i)]; ok {
 			t.Errorf("Removing kvse failed. Added at %s: %d, and got it back.", strconv.Itoa(i), 2*i)
@@ -89,6 +109,8 @@ func TestKvseSetExpiration(t *testing.T) {
 func TestMultipleKvses(t *testing.T) {
 	kvses1 := New(time.Second)
 	kvses2 := New(time.Second)
+	kvses1.Clock = PastClock
+	kvses2.Clock = PastClock
 	for i := 1; i <= 10; i++ {
 		kvses1.Set(strconv.Itoa(i), i*2, time.Second)
 		kvses2.Set(strconv.Itoa(i), i*3, time.Second)
