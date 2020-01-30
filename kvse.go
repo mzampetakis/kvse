@@ -101,7 +101,7 @@ func (ds *DataStore) Remove(key string) {
 
 func (ds *DataStore) deleteExpiredKeys() {
 	for {
-		startTime := ds.Clock.Now()
+		startTime := time.Now()
 		ds.checkAndDeleteExpiredKeys()
 		if time.Since(startTime) < ds.deletePrecision {
 			time.Sleep(ds.deletePrecision - time.Since(startTime))
@@ -125,7 +125,7 @@ func (ds *DataStore) String() string {
 	ds.mx.RLock()
 	defer ds.mx.RUnlock()
 	str := "PRINTING KVSE STRUCTURE\n"
-	str = str + fmt.Sprintf("%v", ds)
+	str = str + fmt.Sprintf("%v", *ds)
 	str = "DUMPING KVSE DATA\n"
 	for key, data := range ds.data {
 		str = str + fmt.Sprintf(" Key %s \t Val: %d \t Exp: %s \n", key, data.value, data.expiration)
