@@ -100,12 +100,10 @@ func (ds *DataStore) Remove(key string) {
 }
 
 func (ds *DataStore) deleteExpiredKeys() {
+	checkIntervalTicker := time.NewTicker(ds.deletePrecision)
 	for {
-		startTime := time.Now()
+		<- checkIntervalTicker.C
 		ds.checkAndDeleteExpiredKeys()
-		if time.Since(startTime) < ds.deletePrecision {
-			time.Sleep(ds.deletePrecision - time.Since(startTime))
-		}
 	}
 
 }
