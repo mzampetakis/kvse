@@ -22,7 +22,7 @@ type DataStore struct {
 }
 
 // Clock is an interface that provides a single function
-// to return the current time which is used for cheching expiration.
+// to return the current time which is used for checking expiration.
 type Clock interface {
 	Now() time.Time
 }
